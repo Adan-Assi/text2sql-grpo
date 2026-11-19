@@ -1202,3 +1202,83 @@ illustrate the uncertainty associated with the observed proportions:
 These intervals describe uncertainty from sampling and do not account for
 systematic issues such as dataset composition or the preliminary query
 classification method.
+
+---
+
+## 7. Overall Assessment and Next Steps
+
+### 7.1 Assessment Decision
+
+Based on Experiments 1–5, `gretelai/synthetic_text_to_sql` is
+conditionally accepted as the primary dataset candidate for this project.
+
+The exploratory audits established that:
+
+- The dataset contains a substantial number of examples with database
+  contexts that can be constructed successfully in SQLite.
+- A meaningful portion of the sampled reference queries execute
+  successfully and produce non-empty results.
+- The dataset also contains examples with malformed or incomplete
+  contexts, missing tables or columns, SQL dialect incompatibilities,
+  non-SELECT statements, and empty query results.
+- These issues were observed in both the initial streaming audits and
+  the random sample drawn from the complete training split.
+
+The results justify proceeding with the dataset, but do not establish
+that the full dataset is suitable for training without further
+processing.
+
+### 7.2 Remaining Validation
+
+The exploratory audits used samples of 100 examples and therefore
+cannot establish the final number or proportion of usable examples
+across the complete dataset.
+
+Before final acceptance, the project must:
+
+1. Implement a reproducible dataset preparation pipeline.
+2. Process the complete training and test splits independently.
+3. Filter examples based on database construction, read-only SQL
+   execution, result availability, size constraints, determinism,
+   and other justified quality criteria.
+4. Record the number of examples removed at each stage and the
+   reasons for rejection.
+5. Evaluate the resulting dataset's size and composition.
+6. Manually inspect 40 randomly selected surviving examples.
+7. Confirm that the resulting training and evaluation sets meet
+   the project's acceptance criteria.
+
+The filtering pipeline must preserve the original dataset examples
+without silently rewriting their SQL or database contexts.
+
+### 7.3 Known Limitations
+
+The dataset contains SQL and database contexts written for different
+SQL dialects. The project will use SQLite as its execution environment.
+
+Consequently, the preparation pipeline is expected to exclude some
+otherwise valid SQL examples that rely on unsupported dialect-specific
+features, including certain date functions, date arithmetic,
+statistical aggregates, and schema-management statements.
+
+The resulting dataset will therefore represent a filtered subset
+that is compatible with the project's SQLite-based execution setup,
+rather than the full range of SQL represented in the original dataset.
+
+The model prompt must explicitly identify SQLite as the target
+dialect.
+
+### 7.4 Transition to Phase 1
+
+The exploratory suitability assessment (Experiments 1–5) is complete.
+
+The project now moves to **Phase 1: Dataset Preparation and Filtering**.
+
+Phase 1 will implement and validate the filtering pipeline, produce
+the training dataset and evaluation candidate pool, document the
+filtering results, and perform the required manual quality review.
+
+The dataset will receive final acceptance only after these checks
+have been completed.
+
+No model training is initiated during this phase.
