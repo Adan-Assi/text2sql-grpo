@@ -1,7 +1,11 @@
 """Manually test the SQL execution functions."""
 
-from text2sql_grpo.executor import build_database, execute_query
-
+from text2sql_grpo.executor import (
+    build_database,
+    close_database,
+    execute_query,
+    set_read_only
+)
 
 context = """
 CREATE TABLE sales (
@@ -46,4 +50,34 @@ result = execute_query(conn, "SELECT salary FROM sales")
 print("\nInvalid SELECT:")
 print(result)
 
-conn.close()
+# ---------- READ-ONLY MODE ----------
+
+# Enable read-only mode after building the database.
+set_read_only(conn)
+
+# 5. SELECT should still work.
+result = execute_query(conn, "SELECT * FROM sales")
+
+print("\nSELECT in read-only mode:")
+print(result)
+
+# 6. INSERT should be rejected.
+result = execute_query(conn, "INSERT INTO sales VALUES ('Lina', 200)")
+
+print("\nINSERT in read-only mode:")
+print(result)
+
+# 7. UPDATE should be rejected.
+result = execute_query(conn, "UPDATE sales SET amount = 0")
+
+print("\nUPDATE in read-only mode:")
+print(result)
+
+# 8. DELETE should be rejected.
+result = execute_query(conn, "DELETE FROM sales")
+
+print("\nDELETE in read-only mode:")
+print(result)
+
+# ----------- Close Database ----------
+close_database(conn)

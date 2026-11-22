@@ -8,6 +8,16 @@ def build_database(context: str) -> sqlite3.Connection:
     return conn
 
 
+# Close the database connection.
+def close_database(conn: sqlite3.Connection) -> None:
+    conn.close()
+
+
+# Enable read-only mode for the database connection.
+def set_read_only(conn: sqlite3.Connection) -> None:
+    conn.execute("PRAGMA query_only = ON")
+
+
 # Return the names of all user-created tables and views in the database.
 def user_relations(conn: sqlite3.Connection) -> list[str]: # a relation means a table or a view
     """
