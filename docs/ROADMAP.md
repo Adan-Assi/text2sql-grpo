@@ -1,259 +1,226 @@
 # Roadmap
 
-Last updated: 2026-11-15
+Last updated: 2026-11-25
 
-The current plan consists of nine phases (0–8), ordered by dependency. This file tracks **status**. Choices and their reasoning live in [DECISIONS.md](DECISIONS.md); background lives in [CONCEPTS.md](CONCEPTS.md); run records live in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
+This roadmap tracks the project's progress across nine phases (0–8), ordered by dependency.
+
+- **[DECISIONS.md](DECISIONS.md):** Decisions and their reasoning.
+- **[CONCEPTS.md](CONCEPTS.md):** Background concepts and explanations.
+- **[EXPERIMENT_LOG.md](EXPERIMENT_LOG.md):** Experiment configurations, results, and observations.
 
 ## Status rules
 
 | Status | Meaning |
 |---|---|
 | Not started | No work begun |
-| In progress | Instructions issued or work begun, not all verification criteria met |
+| In progress | Work has begun, but verification criteria are not all met |
 | Blocked | Waiting on a decision or external factor |
-| Done (verified) | Every verification criterion met **and the evidence is recorded** |
+| Done (verified) | All verification criteria met and evidence recorded |
 
 ## Overview
 
-| Phase | Goal | Runs on | Status |
+| Phase | Goal | Environment | Status |
 |---|---|---|---|
-| 0 | Project skeleton, environment, clone framework, validate its example configs | Laptop | **In progress** (instructions issued; no results reported) |
-| 1 | Dataset: download, filter, build SQLite databases, create train/eval JSONL | Laptop | Not started |
-| 2 | Safe SQL executor and reward function, with unit tests | Laptop | Not started |
-| 3 | foresight-rl-core task module, YAML config, `validate` | Laptop | Not started |
-| 4 | First GPU session: setup, baseline eval, difficulty-based prompt selection, smoke test | Rented GPU | Not started |
-| 5 | Short real run (~50 steps); read reward curves and samples | Rented GPU | Not started |
-| 6 | Main run (300–600 steps) | Rented GPU | Not started |
-| 7 | Final evaluation (base vs tuned), failure analysis, plots | Rented GPU, then laptop | Not started |
-| 8 | README, results table, cleanup | Laptop | Not started |
+| 0 | Project setup and framework validation | Laptop | In progress |
+| 1 | Dataset preparation and validation | Laptop | In progress |
+| 2 | SQL execution, safety, and reward implementation | Laptop | In progress |
+| 3 | Foresight task module and training configuration | Laptop | Not started |
+| 4 | GPU setup, baseline evaluation, and pipeline smoke test | GPU | Not started |
+| 5 | Short training run | GPU | Not started |
+| 6 | Main training run | GPU | Not started |
+| 7 | Final evaluation and analysis | GPU / Laptop | Not started |
+| 8 | Documentation and cleanup | Laptop | In progress |
 
-Phase 4 step counts and the 300–600 step range come from the original proposal and are `[PROPOSED]`, not tuned.
+## Phase 0: Project setup and framework validation
 
-## Gates
+**Status:** In progress
 
-| Gate | After | Question | If "no" |
-|---|---|---|---|
-| G1 | Phase 0 | Does `rl-train validate` pass on the shipped example config without a GPU? | Diagnose before Phase 1; if unfixable, plan for TRL fallback (D-002) |
-| G2 | Phase 4 | Does a 10-step mock-reward run complete on the rented GPU using our task and data? | Time-box debugging (D-022, about 1 day proposed); then switch to plain TRL with the same reward function |
+**Objective:** Establish the development environment and verify that the Foresight RL Core framework can run on the laptop.
 
----
+**Completed:**
+- Created the project repository and initial directory structure.
+- Initialized the Python project using `uv`.
+- Set up the virtual environment and installed initial dependencies.
+- Cloned Foresight RL Core into `third_party/`.
+- Installed the framework locally for development.
 
-## Phase 0: Workspace and framework check
+**Remaining:**
+- [ ] Verify the framework CLI works.
+- [ ] Run `rl-train validate` on a shipped example configuration.
+- [ ] Record the framework commit hash.
+- [ ] Review the framework's example task and configuration.
+- [ ] Record the setup and validation results.
 
-**Status:** In progress. Setup instructions were given in conversation; the user has not yet reported output. Nothing below is verified.
+**Verification criteria:**
+- Framework CLI runs inside the project environment.
+- A shipped example configuration passes validation.
+- Framework version and setup details are recorded.
 
-**Objective.** A project folder with its own Python environment, the framework cloned alongside, and the framework's example configs validating on the laptop.
+## Phase 1: Dataset preparation
 
-**Deliverables.**
-- Project folder, git repository, `.gitignore`, directory skeleton (`src/sqlgrpo`, `tasks`, `configs`, `scripts`, `tests`, `data`, `third_party`; `docs` added with this documentation).
-- Virtual environment (Python 3.12 proposed, D-018).
-- `third_party/foresight-rl-core` cloned; commit hash recorded.
-- Framework installed in editable mode.
+**Status:** In progress
 
-**Verification criteria.**
-- `rl-train --help` runs inside the environment.
-- `rl-train validate` exits cleanly on `examples/configs/local_example.yaml`, run from the clone's root if relative paths require it.
-- Commit hash recorded in the README pin table.
-- Output of the evidence-gathering commands saved (see tasks).
+**Objective:** Prepare SQaLe 2 examples for Text-to-SQL training and evaluation.
 
-**Remaining tasks.**
-- [ ] Run the Phase 0 commands; report OS, GPU presence (`nvidia-smi`), and all errors.
-- [ ] Record `git rev-parse HEAD` of the clone.
-- [ ] Check whether the base install pulled in torch or other heavy packages (`uv pip list`).
-- [ ] Read and share `examples/configs/local_example.yaml`.
-- [ ] Locate the shipped task that uses `outcome_category` and read its loader and reward code.
-- [ ] Run `rl-train setup-local-gpu --list` and read `LOCAL_GPU_RECIPES` in `foresightrlcore/config/recipes.py`.
-- [ ] Locate `ds_zero2_config.json`.
-- [ ] Resolve the naming question (D-020).
-- [ ] Commit the skeleton and these docs.
+**Completed:**
+- Selected SQaLe 2 as the primary dataset.
+- Loaded the dataset using the Hugging Face Datasets library.
+- Inspected the SQaLe package and its database reconstruction utilities.
+- Audited a sample of 500 queries: 455 SELECT queries and 45 WITH queries.
+- Started investigating database reconstruction fidelity.
 
----
+**Remaining:**
+- [ ] Complete the dataset and database reconstruction audits.
+- [ ] Define filtering and train/evaluation split rules.
+- [ ] Implement the data preparation pipeline.
+- [ ] Build the SQLite databases needed by the examples.
+- [ ] Execute and validate gold queries.
+- [ ] Generate the training and evaluation JSONL files.
+- [ ] Inspect prepared examples and record dataset statistics.
 
-## Phase 1: Dataset
+**Verification criteria:**
+- Dataset filtering and split rules are documented.
+- Training and evaluation examples do not overlap.
+- Gold queries execute successfully against their reconstructed databases, or failures are accounted for.
+- Prepared examples contain the information required by the training and reward pipeline.
+- Dataset statistics and representative examples are recorded.
 
-**Status:** Not started.
+## Phase 2: SQL executor and reward
 
-**Objective.** Turn `gretelai/synthetic_text_to_sql` into train and eval JSONL files whose rows contain everything the reward function needs, with gold results precomputed and verified.
+**Status:** In progress
 
-**Deliverables** (file names `[PROPOSED]`).
-- A data-prep module in `src/sqlgrpo/` and a script in `scripts/`.
-- `data/train.jsonl`, `data/eval.jsonl` (git-ignored), with `prompt` (chat messages) plus `db_context` and `gold_result` columns, following the framework's documented format `[VERIFIED: extra columns become reward kwargs]`.
-- A short data report: counts at each filtering stage.
-- `pyproject.toml` so `sqlgrpo` is installable (D-019).
+**Objective:** Implement a reliable SQL execution component and an execution-based reward function.
 
-**Verification criteria** `[PROPOSED]`.
-- Dataset fields match the dataset card; split sizes recorded.
-- Only SELECT-type examples kept; rule documented.
-- Every kept gold query executes in SQLite; the fraction dropped is reported.
-- Gold results non-empty, or the rule for empty ones is documented.
-- No example appears in both train and eval; eval set fixed and seeded.
-- A sample of rows inspected by eye.
+**Completed:**
+- Implemented SQLite database creation and query execution utilities.
+- Added read-only protections using SQLite's `query_only` setting and an authorizer allowlist.
+- Added initial executor tests and started developing a safety-focused test suite.
 
-**Remaining tasks.**
-- [ ] Decide prompt content: schema only, or schema plus data (D-017).
-- [ ] Decide eval set size and construction (D-014).
-- [ ] Decide how the eval set is made reproducible given `data/` is git-ignored.
-- [ ] Decide result serialization for `gold_result`.
+**Remaining:**
+- [ ] Complete and run tests against the actual executor implementation.
+- [ ] Verify that permitted queries work and prohibited operations are rejected.
+- [ ] Address execution limits and other relevant safety protections.
+- [ ] Implement SQL extraction from model completions.
+- [ ] Implement result comparison and the reward function.
+- [ ] Test reward behavior on representative dataset examples.
 
----
+**Verification criteria:**
+- Valid SELECT queries execute correctly.
+- Invalid SQL and prohibited operations are handled safely.
+- Query execution has appropriate resource limits.
+- Result comparison and reward calculation are deterministic.
+- Gold queries receive the expected maximum reward.
+- Tests run successfully without requiring a GPU.
 
-## Phase 2: Executor and reward function
+## Phase 3: Framework task module and configuration
 
-**Status:** Not started.
+**Status:** Not started
 
-**Objective.** A deterministic, sandboxed SQL executor and a reward function built on it, tested without a GPU.
+**Objective:** Integrate the dataset and reward function with Foresight RL Core.
 
-**Deliverables** (`[PROPOSED]`).
-- `src/sqlgrpo/executor.py`: build database from context, run a query with limits, return rows or an error category.
-- `src/sqlgrpo/reward.py`: SQL extraction from completions (strings and chat-message lists), tiered scoring.
-- Unit tests in `tests/`.
+**Planned work:**
+- Implement the Text-to-SQL task module.
+- Connect the dataset loader and reward function to the framework.
+- Create training configurations.
+- Support mock-reward execution for pipeline testing.
 
-**Verification criteria** `[PROPOSED]`.
-- Tests cover: correct query, wrong-result query, syntax error, unknown table/column, empty output, code-fenced output, extra prose, infinite or very slow query (timeout), forbidden statements (`ATTACH`, writes), different-but-equivalent query, order sensitivity.
-- Reward is deterministic across repeated calls.
-- Gold SQL scores the maximum on a sample of dataset rows.
-- A batch of 100+ completions scores in a reasonable time on a laptop (threshold to be set).
+**Verification criteria:**
+- Task module imports successfully on a CPU-only machine.
+- Dataset loader provides data in the expected format.
+- Reward function receives the required example fields.
+- Training configurations pass framework validation.
 
-**Remaining tasks.**
-- [ ] Settle result comparison rules (D-006).
-- [ ] Choose reward tier values (D-006).
-- [ ] Choose timeout and row-limit values.
+## Phase 4: GPU setup and pipeline smoke test
 
----
+**Status:** Not started
 
-## Phase 3: Framework task module and config
+**Objective:** Set up the training environment, evaluate the base model, and verify the complete pipeline before a real training run.
 
-**Status:** Not started.
+**Planned work:**
+- Set up the selected GPU environment and dependencies.
+- Run baseline evaluation on the held-out evaluation set.
+- Inspect base-model performance on training examples.
+- Run a short mock-reward training session.
+- Record runtime, memory usage, and setup details.
 
-**Objective.** Wrap the reward and data in the framework's task protocol and write a config that passes `rl-train validate`.
+**Verification criteria:**
+- GPU environment is operational.
+- Baseline evaluation completes and results are recorded.
+- Mock-reward training completes successfully.
+- Training outputs and environment details are saved.
 
-**Deliverables** (`[PROPOSED]`).
-- `tasks/text_to_sql.py` exporting `get_reward_function`, `get_callbacks`, `get_dataset_loader` `[VERIFIED: protocol from docs/tasks/creating-a-task.md]`, including a `mock` reward mode as the docs recommend.
-- A loader accepting both a file path and a directory (the docs' example loader globs a directory, while the shipped local config points at a single file).
-- YAML config(s) in `configs/` for mock and real runs, using `task.type` as a `.py` file path `[VERIFIED: supported resolution order]`.
+## Phase 5: Short training run
 
-**Verification criteria** `[PROPOSED]`.
-- `rl-train validate` passes on the configs.
-- Task module imports on a CPU-only machine.
-- Loader returns a dataset whose `prompt` field is in the form the trainer expects and whose extra columns reach the reward function (checked with a stub call).
-- Reward function called via the task module matches Phase 2 results.
+**Status:** Not started
 
-**Remaining tasks.**
-- [ ] Read the full GRPO parameter reference in `docs/launching-sagemaker-training-job.md`.
-- [ ] Choose all hyperparameters (D-007, D-008, D-010, D-011, D-012, D-021, D-023).
-- [ ] Confirm how a file-path task and relative paths resolve in the training subprocess.
+**Objective:** Run a short training experiment with the actual reward function before committing resources to the main run.
 
----
+**Planned work:**
+- Run approximately 50 training steps.
+- Inspect reward trends and generated SQL samples.
+- Check for unstable training behavior or reward exploitation.
+- Decide whether the setup is ready for the main run.
 
-## Phase 4: First GPU session
+**Verification criteria:**
+- Training completes successfully.
+- Reward values and generated samples are inspected.
+- No critical training or execution issues remain unresolved.
 
-**Status:** Not started. Blocked on Phases 0–3 and on D-009 (GPU provider).
+## Phase 6: Main training run
 
-**Objective.** Prove the pipeline end to end on rented hardware, measure the baseline, and choose training prompts.
+**Status:** Not started
 
-**Deliverables** (`[PROPOSED]`).
-- Reproducible GPU setup script (framework, recipe dependencies, our package).
-- Baseline evaluation of the untuned model on the eval set, with the same executor.
-- Per-prompt base-model pass rates on the training split; filtered training set.
-- A 10-step mock-reward run (`training.max_steps: 10`, mock reward mode) `[VERIFIED: pattern documented for the advice task]`.
-- Recorded peak GPU memory and time per step.
-- Optional, if `local_example.yaml` uses a small model: run it unmodified first, to separate framework problems from ours `[PROPOSED]`.
+**Objective:** Run the main GRPO fine-tuning experiment.
 
-**Verification criteria** `[PROPOSED]`.
-- Mock run completes 10 steps and writes outputs.
-- Baseline accuracy computed and logged in the experiment log with config and revisions.
-- Pass-rate distribution inspected; a usable subset exists (the 20–70% band is a heuristic, D-013).
-- Instance terminated after the session; cost noted.
+**Planned work:**
+- Run the planned training configuration.
+- Monitor training metrics and generated samples.
+- Save checkpoints and training logs.
+- Preserve the final model adapter and experiment configuration.
 
-**Remaining tasks.**
-- [ ] Choose provider and instance (D-009).
-- [ ] Verify `vllm_mode` choice on one GPU (D-010).
-- [ ] Verify TRL batch semantics against `num_generations` (D-011).
-- [ ] Check whether DeepSpeed ZeRO-2 works unchanged on one GPU (D-021).
-
----
-
-## Phase 5: Short real run
-
-**Status:** Not started.
-
-**Objective.** A ~50-step run with the real reward to check that learning signals look sane before spending on the main run.
-
-**Deliverables.** Logged reward curve and completion samples; notes on any hacking or instability; a go/no-go for Phase 6.
-
-**Verification criteria** `[PROPOSED]`.
-- Reward values span the tiers (not all identical).
-- Sample completions read by a human.
-- No divergence, empty outputs, or obvious gaming.
-- Throughput and memory acceptable for the planned run length.
-
-**Remaining tasks.**
-- [ ] Decide reward normalization and loss type (D-012).
-- [ ] Decide learning rate and batch settings.
-
----
-
-## Phase 6: Main run
-
-**Status:** Not started.
-
-**Objective.** The main training run (300–600 steps proposed).
-
-**Deliverables.** Checkpoints/adapter; training logs; experiment-log entry with full config.
-
-**Verification criteria** `[PROPOSED]`.
-- Run completes; adapter saved and loadable.
-- Reward trend inspected, with any plateau or collapse noted.
-- Checkpoints copied off the rented machine before termination.
-
-**Remaining tasks.**
-- [ ] Decide checkpoint frequency and which checkpoint to evaluate.
-- [ ] Decide whether to run extra seeds or ablations (scope-dependent).
-
----
+**Verification criteria:**
+- Training completes or any interruption is documented.
+- Model artifacts and logs are saved.
+- Training behavior and final checkpoint are reviewed.
 
 ## Phase 7: Final evaluation and analysis
 
-**Status:** Not started.
+**Status:** Not started
 
-**Objective.** A fair base-vs-tuned comparison with failure analysis.
+**Objective:** Compare the fine-tuned model against the base model and analyze the results.
 
-**Deliverables.** Evaluation script and outputs; results table; plots; categorized failure cases; hacking check.
+**Planned work:**
+- Evaluate both models on the same held-out examples.
+- Compare execution accuracy and SQL validity.
+- Analyze common failure cases.
+- Inspect whether the reward function encouraged unintended behavior.
+- Generate result tables and plots.
 
-**Verification criteria** `[PROPOSED]`.
-- Same prompts, executor, and decoding for both models.
-- Eval examples confirmed disjoint from training data.
-- Uncertainty reported (a 300-example eval has roughly ±3 percentage points standard error near 50% accuracy).
-- Optional out-of-distribution check run and reported, or explicitly skipped.
-
-**Remaining tasks.**
-- [ ] Decide on the out-of-distribution benchmark (D-014).
-- [ ] Decide how the adapter is loaded for evaluation (adapter vs merged).
-
----
+**Verification criteria:**
+- Both models are evaluated under consistent conditions.
+- Evaluation results are recorded and reproducible.
+- Performance differences and limitations are analyzed.
+- Relevant failure cases are documented.
 
 ## Phase 8: Documentation and cleanup
 
-**Status:** Not started.
+**Status:** In progress
 
-**Objective.** A repository others can understand and reproduce.
+**Objective:** Prepare the repository and project documentation to clearly explain the implementation, experiments, and findings.
 
-**Deliverables.** README with real results and reproduction steps; filled pin table; experiment log complete; license chosen; adapter published only after license check.
+**Completed:**
+- Updated the README to reflect the project's current direction and progress.
+- Reviewed and corrected the documented project structure.
 
-**Verification criteria** `[PROPOSED]`.
-- Every `TODO` in the README is resolved or removed.
-- Reproduction steps followed from scratch on a clean machine, or the gap stated.
-- Every reported number traces to an experiment-log entry.
+**Remaining:**
+- [ ] Document the final implementation and setup instructions.
+- [ ] Add experiment results and analysis to the README.
+- [ ] Complete the experiment log.
+- [ ] Remove outdated or unused files and documentation.
+- [ ] Review dependency and licensing requirements.
 
-**Remaining tasks.**
-- [ ] Choose a license; check upstream licenses.
-
----
-
-## Amendment log
-
-| Date | Change | Status |
-|---|---|---|
-| 2026-11-15 | Phase 3 to include a mock reward mode and a loader that accepts file or directory | `[PROPOSED]`, not yet agreed |
-| 2026-11-15 | Phase 1/2 to add `pyproject.toml` and install our package, so the task file can import it in the training subprocess | `[PROPOSED]`, not yet agreed |
-| 2026-11-15 | Phase 4 to optionally run the shipped `local_example.yaml` first | `[PROPOSED]`, not yet agreed |
+**Verification criteria:**
+- README accurately reflects the final project.
+- Setup and reproduction instructions are documented.
+- Reported results can be traced to experiment records.
+- Repository structure and documentation are consistent.

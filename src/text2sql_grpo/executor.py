@@ -4,8 +4,13 @@ from dataclasses import dataclass
 # Build an in-memory SQLite database from the given context string.
 def build_database(context: str) -> sqlite3.Connection:
     conn = sqlite3.connect(":memory:") # creates a new in-memory database
-    conn.executescript(context) # runs multiple SQL statements at once from a single string
-    return conn
+    try:
+        conn.executescript(context) # runs multiple SQL statements at once from a single string
+        return conn # return the connection to the caller for further use
+    except sqlite3.Error as e:
+        print(f"Error occurred while executing script: {e}")
+        conn.close() # close the connection if an error occurs
+        raise # re-raise the exception to notify the caller of the failure
 
 
 # Close the database connection.
@@ -13,9 +18,47 @@ def close_database(conn: sqlite3.Connection) -> None:
     conn.close()
 
 
+# Set up a read-only authorizer for the SQLite connection.
+def _read_only_authorizer(action, arg1, arg2, db_name, source):
+    """ This function is called by SQLite for each SQL operation,
+        to determine if it should be allowed.
+
+        action: the type of SQL operation (e.g., SELECT, INSERT)
+        arg1: the first argument (e.g., table name)
+        arg2: the second argument (e.g., column name)
+        db_name: the database name
+        source: the source of the SQL statement
+
+        Returns SQLITE_OK to allow the operation, or SQLITE_DENY to block it.
+        """
+    allowed_actions = { # since its read-only, we only allow SELECT, READ, and FUNCTION operations
+        sqlite3.SQLITE_SELECT,
+        sqlite3.SQLITE_READ,
+        sqlite3.SQLITE_FUNCTION,
+    }
+
+    # Allow recursive triggers if the SQLite version supports it.
+    if hasattr(sqlite3, "SQLITE_RECURSIVE"):
+        allowed_actions.add(sqlite3.SQLITE_RECURSIVE)
+
+    if action in allowed_actions:
+        return sqlite3.SQLITE_OK
+
+    return sqlite3.SQLITE_DENY
+
+
 # Enable read-only mode for the database connection.
 def set_read_only(conn: sqlite3.Connection) -> None:
-    conn.execute("PRAGMA query_only = ON")
+    conn.execute("PRAGMA query_only = ON") # sets the connection to read-only mode (changes a connection setting)
+    # Prevents modifications to the current database (e.g., INSERT, UPDATE, DELETE).
+    # However, it does not prevent every operation with external side effects.
+    # Example: a later VACUUM INTO 'copy.db' query can still create a new database file,
+    #          and it would be allowed because the original database remains unchanged.
+
+    conn.set_authorizer(_read_only_authorizer)
+    # Adds a stricter restriction: SQLite checks every SQL operation before executing it.
+    # Only explicitly allowed operations (SELECT, READ, FUNCTION, RECURSIVE) are permitted.
+    # In this case, VACUUM INTO requires a disallowed operation, so it is rejected BEFORE creating the file.
 
 
 # Return the names of all user-created tables and views in the database.
@@ -81,8 +124,6 @@ def total_table_rows(conn: sqlite3.Connection) -> int:
 
     return total_rows
 
-
-@dataclass
 
 # Class used for a consistent format of execution results.
 @dataclass

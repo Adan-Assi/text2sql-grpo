@@ -1,5 +1,7 @@
 """Manually test the SQL execution functions."""
 
+import sqlite3
+
 from text2sql_grpo.executor import (
     build_database,
     close_database,
@@ -78,6 +80,42 @@ result = execute_query(conn, "DELETE FROM sales")
 
 print("\nDELETE in read-only mode:")
 print(result)
+
+# ---------- DATABASE CONSTRUCTION ----------
+
+# Case A: Valid context
+valid_context = """
+CREATE TABLE products (
+    name TEXT,
+    price REAL
+);
+
+INSERT INTO products VALUES ('Laptop', 3000);
+"""
+
+conn = build_database(valid_context)
+
+print("\nValid context:")
+print(execute_query(conn, "SELECT * FROM products"))
+
+close_database(conn)
+
+
+# Case B: Invalid context
+invalid_context = """
+CREATE TABLE products (
+    name TEXT,
+    price REAL
+);
+
+INSERT INTO nonexistent_table VALUES ('Laptop', 3000);
+"""
+
+try:
+    conn = build_database(invalid_context)
+except sqlite3.Error as e:
+    print("\nInvalid context:")
+    print(type(e).__name__, e)
 
 # ----------- Close Database ----------
 close_database(conn)
