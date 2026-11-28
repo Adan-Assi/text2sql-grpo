@@ -540,7 +540,7 @@ wheels = [
 [[package]]
 name = "text2sql-grpo"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "datasets" },
     { name = "sqale" },
@@ -554,7 +554,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "datasets", specifier = ">=5.2.0" },
-    { name = "sqale", specifier = ">=0.2.0" },
+    { name = "sqale", specifier = "==0.2.0" },
 ]
 
 [package.metadata.requires-dev]

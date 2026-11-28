@@ -1,6 +1,6 @@
 # Decisions
 
-Last updated: 2026-11-15
+Last updated: 2026-11-27
 
 This file records what has been decided, why, what else was considered, and what is still unknown. It is the single place for project-specific choices. Concept explanations are in [CONCEPTS.md](CONCEPTS.md); phase status is in [ROADMAP.md](ROADMAP.md).
 
@@ -21,8 +21,8 @@ When a decision changes, edit the record, add a line under **History**, and keep
 | D-001 | Project: Text-to-SQL with execution-based reward | CONFIRMED | n/a |
 | D-002 | Training path: foresight-rl-core local GRPO, TRL as fallback | CONFIRMED (strategy); fallback trigger in D-022 | Phase 0 / 4 |
 | D-003 | Own repo; framework cloned to `third_party/`; task loaded by file path | PROVISIONAL | Phase 0 / 3 |
-| D-004 | Dataset: `gretelai/synthetic_text_to_sql` | PROVISIONAL | Phase 1 |
-| D-005 | Reward is based on executing SQL in SQLite | CONFIRMED | n/a |
+| D-004 | Dataset: SQaLe 2 | CONFIRMED | Phase 1 |
+| D-005 | Reward based on executing gold and generated SQL in SQLite | CONFIRMED | n/a |
 | D-006 | Reward tiers, values, and result-comparison rules | OPEN (tier shape PROVISIONAL) | Phase 2 |
 | D-007 | Model: Qwen3-1.7B, fallback Qwen3-0.6B | PROVISIONAL | Phase 4 |
 | D-008 | Disable Qwen3 thinking mode | PROVISIONAL | Phase 3 / 4 |
@@ -42,6 +42,7 @@ When a decision changes, edit the record, add a line under **History**, and keep
 | D-022 | Fallback trigger to plain TRL | PROVISIONAL | Gate G2 |
 | D-023 | LoRA settings | OPEN | Phase 3 |
 | D-024 | Scope exclusions | PROVISIONAL | n/a |
+| D-025 | Official SQaLe reconstruction and version pinning | CONFIRMED | Phase 1 |
 
 ---
 
@@ -114,18 +115,22 @@ Sources read on 2026-11-15 unless noted. "Doc" means a file in the foresight-rl-
 **Open.** Nothing has been run (U13). How relative paths and file-path tasks resolve inside the training subprocess is unverified.
 
 ### D-004: Dataset
-**Status:** PROVISIONAL.
-**Decision.** Use `gretelai/synthetic_text_to_sql`, keeping SELECT-type examples whose gold query executes in SQLite and returns a usable result.
-**Why.** Apache-2.0 (V18); `sql_context` includes data, so execution-based rewards are possible; large enough for train/eval splits.
-**Alternatives.** Spider (real multi-table schemas; databases need a separate download; better as an out-of-distribution test); BIRD (heavier); `b-mc2/sql-create-context` (no data, so no execution).
-**Risks.** Synthetic data; some gold queries may not be valid SQLite; tables may be tiny, raising false-positive risk.
-**Open.** U10.
+**Status:** CONFIRMED.
+**Decision.** Use SQaLe 2:
+- [`trl-lab/SQaLe-2-text-to-SQL-Schemas`](https://huggingface.co/datasets/trl-lab/SQaLe-2-text-to-SQL-Schemas)
+- [`trl-lab/SQaLe-2-text-to-SQL-Queries`](https://huggingface.co/datasets/trl-lab/SQaLe-2-text-to-SQL-Queries)
+
+Use the official train/test splits and preserve schema-level separation.
+**Why.** SQaLe 2 provides schemas and corresponding Text-to-SQL queries, with separate train and test schema sets. It supports execution-based training and held-out evaluation.
+**Alternatives.** Spider (real multi-table schemas; databases need a separate download; useful as an out-of-distribution benchmark); BIRD (heavier); `gretelai/synthetic_text_to_sql` (previous candidate).
+**History.** Replaced the provisional Gretel dataset choice after inspecting SQaLe 2 and its database reconstruction workflow.
 
 ### D-005: Execution-based reward on SQLite
 **Status:** CONFIRMED.
-**Decision.** Reward is computed by executing the generated query in SQLite and comparing results to a precomputed gold result.
-**Why.** This is the project's premise and gives a deterministic, free verifier. The same executor serves training and evaluation.
+**Decision.** Execute both the generated SQL and gold SQL against the same reconstructed SQLite database instance, then compare their results. Apply the same read-only execution restrictions to both.
+**Why.** This provides a deterministic, execution-based reward and allows valid alternative SQL formulations rather than requiring an exact string or AST match.
 **Alternatives.** String or AST match with gold SQL (penalizes valid alternatives); LLM judge (cost, nondeterminism, setup).
+**History.** Clarified that the gold query is executed at reward time against the same database as the generated query, rather than comparing against a precomputed result.
 
 ### D-006: Reward structure and result comparison
 **Status:** OPEN (tier shape PROVISIONAL).
@@ -133,7 +138,6 @@ Sources read on 2026-11-15 unless noted. "Doc" means a file in the foresight-rl-
 **Open.**
 - Numeric values for each tier.
 - Result comparison: unordered multiset vs ordered; when `ORDER BY` is present; column order and names; float tolerance; NULLs; duplicates.
-- Treatment of examples with empty gold results (proposal: drop them, to reduce coincidental matches).
 - Whether partial credit helps or invites shortcuts. Possible ablation: binary vs tiered reward.
 **Revisit.** Phase 2 design; Phase 5 samples.
 
@@ -257,6 +261,32 @@ Sources read on 2026-11-15 unless noted. "Doc" means a file in the foresight-rl-
 **Status:** PROVISIONAL.
 **Decision.** Out of scope for the first version: LLM-judge rewards, the SageMaker and HyperPod backends, DPO/RLAIF, speculative decoding, load testing, and the framework's `evaluate`/`optimizer` operations.
 **Why.** Keep the project small and the reward deterministic, in line with the owner's request to avoid unnecessary complexity and cost. The framework's `evaluate` command is not used because we need a custom executor-based evaluation anyway.
+
+### D-025: Official SQaLe reconstruction and version pinning
+**Status:** CONFIRMED.
+**Decision.**
+- Use the official `sqale==0.2.0` package and its `build_database` function to reconstruct databases.
+- Do not modify source data, package code, or DDL to repair reconstruction discrepancies.
+- Do not automatically exclude examples solely because reconstructed row counts differ from source row counts.
+- Record the SQLite runtime version used for reproducibility: `3.37.2`.
+- Document known reconstruction limitations and account for unusable examples through the data eligibility rules, rather than modifying the databases.
+**Why.** Keeping the official reconstruction makes the execution environment consistent with the dataset's provided builder. Custom repairs would change that environment and could change gold-query results.
+**Evidence.** The investigation of `schema_018710` found that the official builder inserted 24 of 341 `Songs` rows. A separate diagnostic reconstruction showed that changing the DDL changed the results of 13 of the 25 inspected queries that read `Songs`. The diagnostic builder was removed and is not part of the project pipeline.
+**History.** The initial investigation considered excluding examples affected by missing reconstructed rows. The final decision is to retain the official reconstruction and treat its limitations as documented constraints, not automatic exclusion criteria.
+
+### D-026: Sample eligibility for dataset preparation
+**Status:** CONFIRMED.
+**Decision.**
+- Retain examples only when the required question, schema, and gold SQL are available.
+- The database must be constructible using the official SQaLe builder.
+- Gold SQL must execute successfully against that reconstructed database under the same read-only restrictions used for generated SQL.
+- Exclude examples whose gold SQL produces an empty result from training.
+- For evaluation, exclude empty-result examples or report them separately.
+- Do not automatically exclude examples solely because reconstructed row counts differ from source row counts.
+- Do not automatically exclude non-empty results because they contain only NULL values or scalar values such as 0 or 1.
+- Do not modify source data, database contents, or gold SQL to make an example eligible.
+**Why.** Eligibility should reflect whether an example can support the project's execution-based training objective, without changing the official reconstruction or discarding potentially meaningful results based on their shape.
+**Revisit.** Phase 1 implementation and Phase 2 executor validation, if implementation reveals an unresolved requirement.
 
 ---
 

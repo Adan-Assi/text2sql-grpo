@@ -1,7 +1,14 @@
 # Smoke Test Reports
 
-This directory contains temporary reports generated during small-scale smoke tests of the dataset preparation pipeline.
+This directory contains concise, version-controlled reports of meaningful
+smoke tests performed during project development.
 
-These reports are used to verify that the pipeline runs correctly and that its filtering stages and output generation behave as expected before processing the full dataset.
+Reports document small-scale checks used to verify that specific
+components or changes run as expected before broader execution. Each
+report records the test scope, command, observed results, and limitations.
 
-Smoke test reports are temporary and are excluded from version control.
+Smoke tests are not substitutes for full validation. Their results must
+not be interpreted as evidence of dataset-wide correctness or suitability.
+
+Temporary outputs and detailed audit artifacts are stored separately
+under `audit_out/` and are excluded from version control.

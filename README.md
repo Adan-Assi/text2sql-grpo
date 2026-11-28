@@ -107,6 +107,16 @@ Activate the virtual environment:
 source .venv/bin/activate
 ```
 
+## Project Environment
+
+| Component | Version |
+|---|---|
+| Python | 3.12 |
+| SQaLe | 0.2.0 |
+| SQLite runtime | 3.37.2 |
+
+Dependencies are pinned in `uv.lock`. The SQLite version refers to the runtime linked to Python's `sqlite3` module.
+
 ## Dataset
 
 The project uses [SQaLe 2](https://huggingface.co/datasets/trl-lab/SQaLe-2-text-to-SQL-Queries), a Text-to-SQL dataset containing natural-language questions, SQL queries, and associated database information.

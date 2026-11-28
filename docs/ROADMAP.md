@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-11-25
+Last updated: 2026-11-27
 
 This roadmap tracks the project's progress across nine phases (0–8), ordered by dependency.
 
@@ -60,36 +60,47 @@ This roadmap tracks the project's progress across nine phases (0–8), ordered b
 
 **Status:** In progress
 
-**Objective:** Prepare SQaLe 2 examples for Text-to-SQL training and evaluation.
+**Objective:** Prepare SQaLe 2 examples for Text-to-SQL GRPO training and evaluation, using the official database reconstruction behavior and excluding unusable examples without modifying source data.
 
 **Completed:**
 - Selected SQaLe 2 as the primary dataset.
 - Loaded the dataset using the Hugging Face Datasets library.
 - Inspected the SQaLe package and its database reconstruction utilities.
-- Audited a sample of 500 queries: 455 SELECT queries and 45 WITH queries.
-- Started investigating database reconstruction fidelity.
+- Audited samples from the training and test datasets for SQL execution, reconstruction behavior, and data quality.
+- Confirmed that the official builder can produce databases with fewer rows than the original source data.
+- Decided to retain the official SQaLe builder unchanged and exclude unusable examples rather than repair or modify source data.
+- Decided to preserve the official schema-disjoint train/test separation.
+- Defined and documented sample eligibility rules in D-026.
 
 **Remaining:**
-- [ ] Complete the dataset and database reconstruction audits.
-- [ ] Define filtering and train/evaluation split rules.
-- [ ] Implement the data preparation pipeline.
-- [ ] Build the SQLite databases needed by the examples.
-- [ ] Execute and validate gold queries.
+- [x] Remove the experimental custom database builder and restore the audit script to use the official SQaLe builder.
+- [x] Pin `SQaLe==0.2.0` and record the SQLite version used.
+- [x] Define sample eligibility and filtering rules.
+- [ ] Implement the eligibility and filtering rules.
+- [ ] Exclude examples whose gold SQL produces an empty result from training. For evaluation, exclude them or report them separately.
+- [ ] Validate gold SQL using the same read-only execution restrictions used for model-generated SQL.
+- [ ] Build prompt schemas from the actual reconstructed SQLite databases using `sqlite_master`.
+- [ ] Preserve schema-level separation when creating any additional training and evaluation splits.
+- [ ] Build the SQLite databases needed by the prepared examples.
 - [ ] Generate the training and evaluation JSONL files.
 - [ ] Inspect prepared examples and record dataset statistics.
 
 **Verification criteria:**
-- Dataset filtering and split rules are documented.
-- Training and evaluation examples do not overlap.
-- Gold queries execute successfully against their reconstructed databases, or failures are accounted for.
-- Prepared examples contain the information required by the training and reward pipeline.
+- Dataset filtering and split rules are documented and implemented.
+- Training and evaluation examples do not overlap by `schema_id`.
+- The official SQaLe builder is used without source-data or schema repairs.
+- The SQaLe package and SQLite versions are recorded.
+- Gold queries used for training execute successfully under the read-only authorizer restrictions.
+- Empty-result examples are handled according to the documented policy.
+- Prompt schemas accurately reflect the corresponding reconstructed databases.
+- Prepared examples contain all information required by the training and reward pipeline.
 - Dataset statistics and representative examples are recorded.
 
 ## Phase 2: SQL executor and reward
 
 **Status:** In progress
 
-**Objective:** Implement a reliable SQL execution component and an execution-based reward function.
+**Objective:** Implement a reliable, read-only SQL execution component and a deterministic execution-based reward function for Text-to-SQL GRPO training.
 
 **Completed:**
 - Implemented SQLite database creation and query execution utilities.
@@ -98,16 +109,19 @@ This roadmap tracks the project's progress across nine phases (0–8), ordered b
 
 **Remaining:**
 - [ ] Complete and run tests against the actual executor implementation.
-- [ ] Verify that permitted queries work and prohibited operations are rejected.
+- [ ] Verify that permitted queries work and prohibited operations, including writes and `ATTACH`, are rejected.
+- [ ] Ensure gold SQL and model-generated SQL are subject to the same read-only execution restrictions.
+- [ ] Ensure gold and generated SQL are executed against the same database instance for each example.
 - [ ] Address execution limits and other relevant safety protections.
 - [ ] Implement SQL extraction from model completions.
 - [ ] Implement result comparison and the reward function.
-- [ ] Test reward behavior on representative dataset examples.
+- [ ] Test reward behavior on representative dataset examples, including empty and non-empty results.
 
 **Verification criteria:**
 - Valid SELECT queries execute correctly.
 - Invalid SQL and prohibited operations are handled safely.
 - Query execution has appropriate resource limits.
+- Gold and generated SQL use the same database instance and execution restrictions.
 - Result comparison and reward calculation are deterministic.
 - Gold queries receive the expected maximum reward.
 - Tests run successfully without requiring a GPU.

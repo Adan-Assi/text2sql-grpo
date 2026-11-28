@@ -1,9 +1,16 @@
 # Dataset Suitability Assessment: Gretel Synthetic Text-to-SQL
 
-**Status:** Initial investigation in progress\
+**Status:** Historical investigation (completed; dataset not selected)\
 **Candidate dataset:**
 [`gretelai/synthetic_text_to_sql`](https://huggingface.co/datasets/gretelai/synthetic_text_to_sql)\
 **Project:** Text-to-SQL with execution-based rewards and GRPO
+
+> **Historical note:** This document records the initial investigation of
+> `gretelai/synthetic_text_to_sql`. Gretel was an earlier candidate and was
+> subsequently superseded by SQaLe 2. The experiments and findings below
+> apply only to Gretel. The assessment, recommendations, and Phase 1 plan
+> reflect the project's state at that time and are not the current
+> dataset decisions or preparation requirements.
 
 ------------------------------------------------------------------------
 
@@ -1205,80 +1212,35 @@ classification method.
 
 ---
 
-## 7. Overall Assessment and Next Steps
+## 7. Historical Assessment and Outcome
 
-### 7.1 Assessment Decision
+### 7.1 Assessment at the Time
 
-Based on Experiments 1–5, `gretelai/synthetic_text_to_sql` is
-conditionally accepted as the primary dataset candidate for this project.
+Based on Experiments 1–5, `gretelai/synthetic_text_to_sql` was
+conditionally accepted as the primary dataset candidate.
 
-The exploratory audits established that:
+This was a provisional decision based on exploratory audits. The
+investigation did not establish that the complete dataset was suitable
+for training without further processing.
 
-- The dataset contains a substantial number of examples with database
-  contexts that can be constructed successfully in SQLite.
-- A meaningful portion of the sampled reference queries execute
-  successfully and produce non-empty results.
-- The dataset also contains examples with malformed or incomplete
-  contexts, missing tables or columns, SQL dialect incompatibilities,
-  non-SELECT statements, and empty query results.
-- These issues were observed in both the initial streaming audits and
-  the random sample drawn from the complete training split.
+### 7.2 Outcome
 
-The results justify proceeding with the dataset, but do not establish
-that the full dataset is suitable for training without further
-processing.
+Gretel was subsequently superseded by SQaLe 2 as the project's
+selected dataset.
 
-### 7.2 Remaining Validation
+The experiments documented in this file remain historical evidence
+about the Gretel dataset. Their results and recommendations should
+not be interpreted as findings about SQaLe 2.
 
-The exploratory audits used samples of 100 examples and therefore
-cannot establish the final number or proportion of usable examples
-across the complete dataset.
+### 7.3 Relationship to Current Project Decisions
 
-Before final acceptance, the project must:
+The current dataset selection, reconstruction policy, eligibility
+criteria, and preparation workflow are documented in:
 
-1. Implement a reproducible dataset preparation pipeline.
-2. Process the complete training and test splits independently.
-3. Filter examples based on database construction, read-only SQL
-   execution, result availability, size constraints, determinism,
-   and other justified quality criteria.
-4. Record the number of examples removed at each stage and the
-   reasons for rejection.
-5. Evaluate the resulting dataset's size and composition.
-6. Manually inspect 40 randomly selected surviving examples.
-7. Confirm that the resulting training and evaluation sets meet
-   the project's acceptance criteria.
+- `docs/DECISIONS.md`
+- `docs/ROADMAP.md`
+- `docs/dataset_audits/sqale2_reconstruction_investigation.md`
 
-The filtering pipeline must preserve the original dataset examples
-without silently rewriting their SQL or database contexts.
-
-### 7.3 Known Limitations
-
-The dataset contains SQL and database contexts written for different
-SQL dialects. The project will use SQLite as its execution environment.
-
-Consequently, the preparation pipeline is expected to exclude some
-otherwise valid SQL examples that rely on unsupported dialect-specific
-features, including certain date functions, date arithmetic,
-statistical aggregates, and schema-management statements.
-
-The resulting dataset will therefore represent a filtered subset
-that is compatible with the project's SQLite-based execution setup,
-rather than the full range of SQL represented in the original dataset.
-
-The model prompt must explicitly identify SQLite as the target
-dialect.
-
-### 7.4 Transition to Phase 1
-
-The exploratory suitability assessment (Experiments 1–5) is complete.
-
-The project now moves to **Phase 1: Dataset Preparation and Filtering**.
-
-Phase 1 will implement and validate the filtering pipeline, produce
-the training dataset and evaluation candidate pool, document the
-filtering results, and perform the required manual quality review.
-
-The dataset will receive final acceptance only after these checks
-have been completed.
-
-No model training is initiated during this phase.
+This document is retained for historical reference and is not the
+authoritative specification for the current dataset preparation
+pipeline.

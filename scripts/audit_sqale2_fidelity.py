@@ -7,6 +7,8 @@ import re
 import sqlite3
 import sys
 import time
+import math
+from numbers import Real
 from collections import Counter, defaultdict
 from importlib import metadata
 from pathlib import Path
@@ -350,14 +352,64 @@ def stringify(rows):
     return [[None if c is None else str(c) for c in r] for r in rows]
 
 
+def values_equal(a, b):
+    # Compare numeric values with a small tolerance to account for
+    # floating-point representation differences.
+    if isinstance(a, Real) and isinstance(b, Real):
+        if isinstance(a, bool) or isinstance(b, bool):
+            return a == b
+        return math.isclose(a, b, rel_tol=1e-7, abs_tol=1e-8)
+
+    return a == b
+
+
+def rows_equal(a, b):
+    return (
+        len(a) == len(b)
+        and all(values_equal(x, y) for x, y in zip(a, b))
+    )
+
+
+def unordered_rows_equal(actual, stored):
+    # Match rows one-to-one, regardless of their order.
+    if len(actual) != len(stored):
+        return False
+
+    matched = [False] * len(stored)
+
+    def find_match(i, visited):
+        for j, stored_row in enumerate(stored):
+            if visited[j] or not rows_equal(actual[i], stored_row):
+                continue
+
+            visited[j] = True
+
+            if not matched[j] or find_match(matched[j] - 1, visited):
+                matched[j] = i + 1
+                return True
+
+        return False
+
+    return all(find_match(i, [False] * len(stored)) for i in range(len(actual)))
+
+
 def compare_results(actual, stored, ordered):
     a, s = norm_rows(actual), norm_rows(stored)
-    if (a == s) if ordered else (canonical(a) == canonical(s)):
+
+    if ordered:
+        if len(a) == len(s) and all(rows_equal(x, y) for x, y in zip(a, s)):
+            return "match", None
+    elif unordered_rows_equal(a, s):
         return "match", None
-    if canonical(a) == canonical(s):
-        return "mismatch", "order_only"                  # ordered query, ties/order differ
+
+    # If the query is ordered but only the row order differs,
+    # classify it separately.
+    if ordered and unordered_rows_equal(a, s):
+        return "mismatch", "order_only"
+
     if canonical(stringify(a)) == canonical(stringify(s)):
-        return "mismatch", "type_only"                   # e.g. 3 vs "3": serialization artifact?
+        return "mismatch", "type_only"
+
     return "mismatch", f"value_diff(actual={len(a)},stored={len(s)})"
 
 
@@ -454,7 +506,7 @@ def audit_schema(schema_row, questions, budget_s, observed):
     report["ddl_replay"] = replay_ddl(ddl)
 
     try:
-        conn = build_database(schema_row)                # package baseline, unchanged
+        conn = build_database(schema_row)
     except Exception as exc:                             # noqa: BLE001
         report["build_exception"] = f"{type(exc).__name__}: {exc}"
         return report, [{"schema_id": sid, "question_id": q.get("question_id"),
@@ -476,10 +528,12 @@ def audit_schema(schema_row, questions, budget_s, observed):
 def parse_args():
     def n_schemas(v):
         v = int(v)
-        if not 1 <= v <= 10:
-            raise argparse.ArgumentTypeError("draft audit is deliberately capped at 1-10 schemas")
+        if not 1 <= v <= 100:
+            raise argparse.ArgumentTypeError("n-schemas must be between 1 and 100")
         return v
-    p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    p = argparse.ArgumentParser(
+    description=(__doc__ or "Audit SQaLe 2 database reconstruction fidelity.").splitlines()[0]
+    )
     p.add_argument("--schemas-dir", required=True)
     p.add_argument("--queries-dir", required=True)
     p.add_argument("--split", default="train", choices=["train", "test"])
